@@ -1,0 +1,179 @@
+# To delete topics using your filter:
+# list_kafka_topics | grep "your_filter_here" | delete_kafka_topics
+
+# To delete all topics with no messages and no consumers:
+# delete_empty_topics
+
+# Ensure the Kafka broker address environment variable is set
+ensure_broker_env() {
+  if [ -z "${KAFKA_BROKER}" ]; then
+    echo "Error: KAFKA_BROKER environment variable is not set. Set it to the address:port of your Kafka broker."
+    return 1
+  fi
+}
+
+ensure_topic_env() {
+  if [ -z "${TOPIC}" ]; then
+    echo "Error: TOPIC environment variable is not set. Set it to the name of the Kafka topic."
+    return 1
+  fi
+}
+
+ensure_consumer_env() {
+  if [ -z "${CONSUMER_GROUP}" ]; then
+    echo "Error: CONSUMER_GROUP environment variable is not set. Set it to the name of the Kafka consumer group."
+    return 1
+  fi
+}
+
+# Function to list Kafka topics
+list_kafka_topics() {
+  ensure_broker_env || return 1
+
+  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
+    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+    echo 'security.protocol=SSL' > broker.config
+    kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list
+  "
+}
+
+# Function to list Kafka consumers
+list_kafka_consumers() {
+  ensure_broker_env || return 1
+
+  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
+    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+    echo 'security.protocol=SSL' > broker.config
+    kafka-consumer-groups --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list
+  "
+}
+
+# Function to delete Kafka topics from stdin
+delete_kafka_topics() {
+  ensure_broker_env || return 1
+
+  # Start by creating a temporary script file
+  script_file=$(mktemp)
+
+  # Add a shebang and any initial setup commands
+  echo "#!/bin/sh" > "$script_file"
+  echo "export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'" >> "$script_file"
+  echo "echo 'security.protocol=SSL' > broker.config" >> "$script_file"
+
+  # Accumulate all topic deletion commands into the script
+  while IFS= read -r topic; do
+    cat <<EOF >> "$script_file"
+if kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --delete --topic "${topic}"; then
+  echo "${topic}"
+fi
+EOF
+  done
+
+  # Make the script executable
+  chmod +x "$script_file"
+
+  # Execute the script inside a Docker container
+  docker run --rm -i -v "$script_file:/delete_topics.sh" --entrypoint=/bin/sh confluentinc/cp-kafka:latest /delete_topics.sh
+
+  # Clean up the temporary script file
+  rm "$script_file"
+}
+
+# Function to describe Kafka log directories
+describe_kafka_topic_log() {
+  ensure_broker_env || return 1
+  ensure_topic_env || return 1
+  local TOPIC=$1
+
+  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
+    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+    echo 'security.protocol=SSL' > broker.config
+    kafka-log-dirs --describe --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --topic-list $TOPIC
+  "
+}
+
+# Function to describe Kafka consumers
+describe_kafka_consumers() {
+  ensure_broker_env || return 1
+  ensure_consumer_env || return 1
+  local CONSUMER_GROUP=$1
+
+  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
+    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+    echo 'security.protocol=SSL' > broker.config
+    kafka-consumer-groups --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --describe --group $CONSUMER_GROUP
+  "
+}
+
+# Main function to identify topics with no messages and no consumers
+find_empty_topics() {
+  ensure_broker_env || return 1
+
+  # Get all topics
+  TOPICS=$(list_kafka_topics)
+
+  # Convert the topics into an array
+  TOPICS_ARRAY=()
+  while IFS= read -r line; do
+    TOPICS_ARRAY+=("$line")
+  done <<< "$TOPICS"
+
+  # Get all topics with no messages
+  TOPICS_HAS_NO_MESSAGE=()
+
+  for TOPIC in "${TOPICS_ARRAY[@]}"; do
+    echo "Checking topic: $TOPIC"
+    SIZE=$(describe_kafka_topic_log $TOPIC | awk 'NR > 1' | tail -n +2 | jq '[.brokers[].logDirs[].partitions[].size] | add')
+    
+    if [ "$SIZE" = "0" ]; then
+      TOPICS_HAS_NO_MESSAGE+=("$TOPIC")
+    fi
+  done
+
+  # Get all consumers topics
+  CONSUMERS=$(list_kafka_consumers)
+
+  # Convert the consumers into an array
+  CONSUMERS_ARRAY=()
+  while IFS= read -r line; do
+    CONSUMERS_ARRAY+=("$line")
+  done <<< "$CONSUMERS"
+
+  # Get all topics in consumers
+  TOPICS_IN_CONSUMERS=()
+
+  for CONSUMER_GROUP in "${CONSUMERS_ARRAY[@]}"; do
+    echo "Checking consumer group: $CONSUMER_GROUP"
+    CONSUMER_TOPICS=$(describe_kafka_consumers $CONSUMER_GROUP | awk 'NR > 1' | tail -n +2 | awk '{print $2}')
+    TOPICS_IN_CONSUMERS+=("$CONSUMER_TOPICS")
+  done
+
+  # Get all topics with no consumers
+  TOPICS_HAS_NO_CONSUMER=()
+
+  for TOPIC in "${TOPICS_HAS_NO_MESSAGE[@]}"; do
+    if [[ ! " ${TOPICS_IN_CONSUMERS[@]} " =~ " ${TOPIC} " ]]; then
+      TOPICS_HAS_NO_CONSUMER+=("$TOPIC")
+    fi
+  done
+
+  # Remove topics that starts with "_confluent"
+  TOPICS_HAS_NO_CONSUMER=("${TOPICS_HAS_NO_CONSUMER[@]/_confluent*/}")
+
+  echo -e "\n\nTopics with no messages and no consumers: \n${TOPICS_HAS_NO_CONSUMER[@]}"
+}
+
+delete_empty_topics() {
+  ensure_broker_env || return 1
+
+  find_empty_topics
+  read -p "Do you want to delete these topics? (y/N): " confirm
+  case $confirm in
+    [yY])
+      echo ${TOPICS_HAS_NO_CONSUMER[@]} | delete_kafka_topics
+      ;;
+    *)
+      echo "No topics were deleted."
+      ;;
+  esac
+}

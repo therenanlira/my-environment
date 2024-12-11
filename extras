@@ -1,0 +1,184 @@
+## Update the PATH variable
+export PATH=$PATH:$HOME/.bin
+
+## Basic aliases
+alias ll="ls -alF"
+
+## Theme configuration
+ZSH_THEME_CONFIG='"s/e\[1;32m/e\[1;36m/g" ~/.oh-my-zsh/themes/xiong-chiamiov-plus.zsh-theme;'
+test $(uname -s) = "Darwin" && sed -i "" $ZSH_THEME_CONFIG;
+test $(uname -s) = "Linux" && sed -i $ZSH_THEME_CONFIG;
+
+## Homebrew settings
+test $(uname -s) = "Darwin" && export BREWDIR="/opt/homebrew/bin/brew"
+test $(uname -s) = "Linux" && export BREWDIR="/home/linuxbrew/.linuxbrew/bin/brew"
+test -x $BREWDIR && eval "$($BREWDIR shellenv)"
+
+export HOMEBREW_EDITOR=vim
+
+## Kubernetes cheats
+test -f $HOME/.krew/bin/kubectl-krew && export PATH="$PATH:${HOME}/.local/bin:${HOME}/.krew/bin"
+test -f $HOME/.kube/config && test -f $HOME/.kube/azure/config && export KUBECONFIG=$HOME/.kube/config:$HOME/.kube/azure/config
+
+alias k=kubectl kx=kubectx kn=kubens
+alias kunset="kubectl config unset current-context; kubectl config unset current-context &>/dev/null"
+
+## Python
+alias py=python3
+# TODO: Stopped working
+# test ! -f /usr/bin/python && sudo ln -s /usr/bin/python3 /usr/bin/python
+
+test -f /usr/local/bin/virtualenvwrapper.sh \
+&& export WORKON_HOME=~/.virtualenvs \
+&& export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3 \
+&& export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv \
+&& source /usr/local/bin/virtualenvwrapper.sh
+
+## Terraform alias
+alias tfswitch="tfswitch -b $HOME/.bin/terraform"
+alias tf="terraform"
+alias tfp="terraform plan -out=plan.tfplan --parallelism 2000"
+alias tfa="terraform apply 'plan.tfplan'"
+alias tfi="terraform init && terraform get -update"
+alias tfw="terraform workspace"
+alias tfwl="terraform workspace list"
+alias tfws="terraform workspace select"
+alias tfs="terraform state"
+alias tfv="terraform validate"
+alias tfiu="terraform init -upgrade"
+alias tfip="tfi && tfp"
+
+## Pulumi alias
+alias pp="pulumi"
+alias ppp="pulumi preview"
+alias ppu="pulumi up"
+alias ppd="pulumi down"
+alias pps="pulumi stack"
+alias ppa="pulumi about"
+
+## AWS alias
+aws_mfa_profile=$(aws configure list-profiles | grep "mfa")
+test $aws_mfa_profile && AWS_PROFILE=$aws_mfa_profile || AWS_PROFILE=$(aws configure list-profiles | head -n 1)
+
+# test $SHELL = "/bin/zsh" && AWS_PROFILE_STATE_ENABLED=true
+# test $SHELL = "/bin/zsh" && export AWS_REGION="us-east-2"
+
+# TODO: fix the error when using export arguments
+if [ $SHELL = "/bin/zsh" ]; then
+    # Functions to redefine export and update the prompt
+    function my_export() {
+        builtin export "$@"
+        if [[ "$1" == "AWS_PROFILE"* ]] || [[ "$1" == "AWS_REGION"* ]]; then
+            update_aws_prompt
+        fi
+    }
+
+    alias export='my_export'
+
+    # Function to update the RPROMPT
+    function update_aws_prompt() {
+        zmodload zsh/parameter
+        RPROMPT='$(aws_prompt_info)'
+        zle && zle reset-prompt
+
+        # Add the current AWS profile to .env file
+        echo "AWS_PROFILE=$AWS_PROFILE" > $HOME/.env
+        # echo "AWS_REGION=$AWS_REGION" >> $HOME/.env
+    }
+
+    # Function precmd to update RPROMPT
+    function precmd() {
+        update_aws_prompt
+    }
+
+    # Get the AWS profile from the .env file, if exists, and set it as the current profile
+    test -f $HOME/.env && aws_profile=$(grep "AWS_PROFILE" $HOME/.env | cut -d "=" -f 2)
+    test $aws_profile && asp $aws_profile
+
+    # RPROMPT configuration
+    RPROMPT='$(aws_prompt_info)'
+fi
+
+## Shell configuration
+test $SHELL = "/bin/bash" && test $(uname -s) = "Darwin" \
+&& brew_etc="$(brew --prefix)/etc" \
+&& [[ -r "${brew_etc}/profile.d/bash_completion.sh" ]] && source "${brew_etc}/profile.d/bash_completion.sh"
+
+test $SHELL = "/bin/bash" && source <(kubectl completion bash)
+test $SHELL = "/bin/bash" && complete -o default -F __start_kubectl k
+
+test $SHELL = "/bin/zsh" && source <(kubectl completion zsh)
+test $SHELL = "/bin/zsh" && autoload -Uz compinit && compinit
+
+test $SHELL = "/bin/zsh" && RPROMPT=$(aws_prompt_info)
+
+## OpenVPN
+alias ovpn-c="openvpn3 session-start --config ~/.client.ovpn"
+alias ovpn-d="openvpn3 session-manage --config ~/.client.ovpn --disconnect"
+
+### Functions
+findhere() {
+  if [[ "$SHELL" == "/bin/bash" ]]; then
+      find . -name "*$1*"
+  elif [[ "$SHELL" == "/bin/zsh" ]]; then
+      echo **"$1"**
+  fi
+}
+function opensslcert() { openssl s_client -showcerts -connect $1:443; }
+function curlcert() { curl $1 -vI --stderr -; }
+function kexec() { kubectl exec -it $1 -- sh -c "clear; (bash || ash || sh)"; }
+function extractkey() { openssl pkcs12 -in $1 -nocerts -out "new.key" && openssl rsa -in "new.key" -out "private.key"; }
+function extractpublic() { openssl pkcs12 -in $1 -clcerts -nokeys -out "public.crt"; }
+function extractca() { openssl pkcs12 -in $1 -cacerts -nokeys -chain -out "ca.crt"; }
+
+## AWS MFA
+if [ $SHELL = "/bin/bash" ]; then
+    function aws-mfa() {
+    local SOURCE_PROFILE=$AWS_PROFILE
+    local MFA_PROFILE="$AWS_PROFILE-mfa"
+
+    local MFA_DEVICE_ARN=$(aws configure get mfa_device_arn --profile $SOURCE_PROFILE)
+    if [ -z "$MFA_DEVICE_ARN" ]; then
+      echo "Error: MFA device ARN not found in the ~/.aws/credentials file for profile $SOURCE_PROFILE"
+      return 1
+    fi
+
+    echo "Enter your MFA token code:"
+    read MFA_CODE
+
+    local CREDENTIALS=$(aws sts get-session-token \
+      --serial-number "$MFA_DEVICE_ARN" \
+      --token-code "$MFA_CODE" \
+      --profile "$SOURCE_PROFILE" \
+      --output json 2>/dev/null)
+
+    if [ $? -ne 0 ]; then
+      echo "Error: Failed to obtain temporary credentials. Please check your MFA token code and try again."
+      return 1
+    fi
+
+    # Extract the credentials from the JSON response
+    local ACCESS_KEY=$(echo "$CREDENTIALS" | jq -r '.Credentials.AccessKeyId')
+    local SECRET_KEY=$(echo "$CREDENTIALS" | jq -r '.Credentials.SecretAccessKey')
+    local SESSION_TOKEN=$(echo "$CREDENTIALS" | jq -r '.Credentials.SessionToken')
+    local EXPIRATION=$(echo "$CREDENTIALS" | jq -r '.Credentials.Expiration')
+
+    # Check if the credentials are not empty
+    if [ -z "$ACCESS_KEY" ] || [ -z "$SECRET_KEY" ] || [ -z "$SESSION_TOKEN" ]; then
+      echo "Error: Failed to parse temporary credentials. Please try again."
+      return 1
+    fi
+
+    # Store the temporary credentials in the MFA profile
+    aws configure set aws_access_key_id "$ACCESS_KEY" --profile "$MFA_PROFILE"
+    aws configure set aws_secret_access_key "$SECRET_KEY" --profile "$MFA_PROFILE"
+    aws configure set aws_session_token "$SESSION_TOKEN" --profile "$MFA_PROFILE"
+
+    echo "Temporary credentials have been set for the '$MFA_PROFILE' profile. They will expire on $EXPIRATION."
+
+    # Export the AWS_PROFILE environment variable to use the MFA profile
+    AWS_PROFILE="$MFA_PROFILE"
+    echo "AWS_PROFILE environment variable set to '$MFA_PROFILE'."
+
+    }
+fi
