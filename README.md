@@ -14,5 +14,5 @@ It will install [Homebrew](https://brew.sh/) on MacOS.
 Run on Terminal:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/therenanlira/dev-environment/refs/heads/main/install-packages.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/install-packages.sh)"
 ```
