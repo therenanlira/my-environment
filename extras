@@ -60,10 +60,6 @@ alias ppa="pulumi about"
 aws_mfa_profile=$(aws configure list-profiles | grep "mfa")
 test $aws_mfa_profile && AWS_PROFILE=$aws_mfa_profile || AWS_PROFILE=$(aws configure list-profiles | head -n 1)
 
-# test $SHELL = "/bin/zsh" && AWS_PROFILE_STATE_ENABLED=true
-# test $SHELL = "/bin/zsh" && export AWS_REGION="us-east-2"
-
-# TODO: fix the error when using export arguments
 if [ $SHELL = "/bin/zsh" ]; then
     # Functions to redefine export and update the prompt
     function my_export() {
@@ -98,6 +94,23 @@ if [ $SHELL = "/bin/zsh" ]; then
     # RPROMPT configuration
     RPROMPT='$(aws_prompt_info)'
 fi
+
+function delete_ecr_images() {
+  if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: delete_ecr_images \"<region>\" \"<repositories separated by space>\""
+    return 1
+  fi
+  local region=$1
+  local repositories=$2
+
+  for repo in "${repositories[@]}"; do
+    aws ecr list-images --region "$region" --repository-name "$repo" --query 'imageIds[*]' --output json | \
+    jq -c '.[] | if .imageTag == null then [{imageDigest: .imageDigest}] else [{imageDigest: .imageDigest, imageTag: .imageTag}] end' | \
+    while read -r image; do
+      aws ecr batch-delete-image --region "$region" --repository-name "$repo" --image-ids "$image" > /dev/null 2>&1
+    done
+  done
+}
 
 ## Shell configuration
 test $SHELL = "/bin/bash" && test $(uname -s) = "Darwin" \
