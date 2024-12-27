@@ -106,7 +106,6 @@ if ! e1s --version &>/dev/null; then
   rm e1s_$E1S_VERSION\_$E1S_OS.tar.gz
 fi
 
-
 ## Extras Bash configurations
 rm $HOME/.extras &>/dev/null \
 && curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/extras
