@@ -3,9 +3,9 @@
 ## Install initial packages
 PACKAGES=("figlet" "ed" "jq" "curl" "git" "gawk" "unzip" "vim" "procps" "whois" "nmap")
 
+sudo apt update &>/dev/null
 for package in "${PACKAGES[@]}"; do
   if ! dpkg -l | grep -q "^ii  $package "; then
-    test "$package" = "${PACKAGES[0]}" && sudo apt update
     sudo apt install -y $package
   fi
 done
