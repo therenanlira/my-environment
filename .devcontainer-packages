@@ -9,8 +9,6 @@ for package in "${PACKAGES[@]}"; do
     sudo apt install -y $package
   fi
 done
- 
-exit
 
 ## Install TLDR
 if ! tldr --version &>/dev/null; then
