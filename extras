@@ -143,6 +143,7 @@ function kexec() { kubectl exec -it $1 -- sh -c "clear; (bash || ash || sh)"; }
 function extractkey() { openssl pkcs12 -in $1 -nocerts -out "new.key" && openssl rsa -in "new.key" -out "private.key"; }
 function extractpublic() { openssl pkcs12 -in $1 -clcerts -nokeys -out "public.crt"; }
 function extractca() { openssl pkcs12 -in $1 -cacerts -nokeys -chain -out "ca.crt"; }
+function createsshkey() { ssh-keygen -t rsa -b 4096 -C $1; }
 
 ## AWS MFA
 if [ $SHELL = "/bin/bash" ]; then
