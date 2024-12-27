@@ -47,7 +47,7 @@ test ! -f $HOME/.vimrc && echo -e 'set ic\nset nu\nset cul\nset cuc\nset bg=dark
 $INSTALL watch whois nmap
 
 ## Configure git
-if ! git config --global user.name &>/dev/null || ! git config --global user.email &>/dev/null; then
+if [ -z "$(git config --global user.name)" ] || [ -z "$(git config --global user.email)" ]; then
   echo -e "\n\n\n########## Configuring git... ##########\n\n\n"
   read -p "Your name: " name
   read -p "Your GitHub email: " email
@@ -65,9 +65,9 @@ if [ $SHELL == "/bin/bash" ]; then
   source $RCFILE
 elif [ $SHELL == "/bin/zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-  test -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting || git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
-  test -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      || git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-  test -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+  test ! -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting || git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
+  test ! -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      || git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
+  test ! -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
 
   grep -q "source $ZSH/oh-my-zsh.sh" $RCFILE || echo -e "source $ZSH/oh-my-zsh.sh" >> $RCFILE
 
@@ -88,16 +88,20 @@ $INSTALL nodejs npm python3 python3-pip pipx golang
 test $OS = "Darwin" && xcode-select --install
 
 ## Install TLDR
-test $OS = "Linux" && sudo npm install -g tldr
-test $OS = "Darwin" && npm install -g tldr
+if ! tldr --version &>/dev/null; then
+  test $OS = "Linux" && sudo npm install -g tldr
+  test $OS = "Darwin" && npm install -g tldr
+fi
 
 ## Install FZF
-if [ $OS == "Linux" ]; then
-  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-  ~/.fzf/install
-elif [ $OS == "Darwin" ]; then
-  $INSTALL fzf
-  $(brew --prefix)/opt/fzf/install
+if ! fzf --version &>/dev/null; then
+  if [ $OS == "Linux" ]; then
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install
+  elif [ $OS == "Darwin" ]; then
+    $INSTALL fzf
+    $(brew --prefix)/opt/fzf/install
+  fi
 fi
 
 source $RCFILE
@@ -105,10 +109,12 @@ test $SHELL = "/bin/bash" && eval "$(fzf --bash)"
 test $SHELL = "/bin/zsh" && source <(fzf --zsh)
 
 ## Install TFSwitch (Terraform version manager)
-wget https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh
-chmod 755 install.sh
-./install.sh -b $HOME/.bin
-rm install.sh
+if ! tfswitch --version &>/dev/null; then
+  wget https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh
+  chmod 755 install.sh
+  ./install.sh -b $HOME/.bin
+  rm install.sh
+fi
 
 ## Install TFSec
 if [ $OS == "Linux" ]; then
@@ -198,36 +204,45 @@ elif [ $OS == "Darwin" ]; then
   $INSTALL k9s
 fi
 
-### Install krew
-(
-  set -x; cd "$(mktemp -d)" &&
-  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
-  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
-  KREW="krew-${OS}_${ARCH}" &&
-  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
-  tar zxvf "${KREW}.tar.gz" &&
-  ./"${KREW}" install krew
-)
+## Install krew
+if ! kubectl krew version &>/dev/null; then
+  (
+    set -x; cd "$(mktemp -d)" &&
+    OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+    ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+    KREW="krew-${OS}_${ARCH}" &&
+    curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+    tar zxvf "${KREW}.tar.gz" &&
+    ./"${KREW}" install krew
+  )
+  export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+fi
 
-### Install kubectl-node-shell
-kubectl krew install neat
-curl -LO https://github.com/kvaps/kubectl-node-shell/raw/master/kubectl-node_shell
-sudo chown root:root kubectl-node_shell
-sudo chmod +x kubectl-node_shell
-sudo mv kubectl-node_shell /usr/local/bin/kubectl-node_shell
+## Install kubectl-node-shell
+if ! kubectl node-shell --version &>/dev/null; then
+  kubectl krew install neat
+  curl -LO https://github.com/kvaps/kubectl-node-shell/raw/master/kubectl-node_shell
+  sudo chown root:root kubectl-node_shell
+  sudo chmod +x kubectl-node_shell
+  sudo mv kubectl-node_shell /usr/local/bin/kubectl-node_shell
+fi
 
-### Install CMCTL and CFSSL
+## Install CMCTL and CFSSL
 if [ $OS == "Linux" ]; then
-  CMCTL_VERSION=0.5.0
-  curl -fsSLO "https://github.com/oleewere/cmctl/releases/download/v${CMCTL_VERSION}/cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz" && 
-  sudo tar zxvf cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz -C /usr/local/bin cmctl
-  rm cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz
+  if cmctl --version &>/dev/null; then
+    CMCTL_VERSION=0.5.0
+    curl -fsSLO "https://github.com/oleewere/cmctl/releases/download/v${CMCTL_VERSION}/cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz" && 
+    sudo tar zxvf cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz -C /usr/local/bin cmctl
+    rm cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz
+  fi
 
-  CFSSL_VERSION=1.6.5
-  curl -fsSLO "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssl-bundle_${CFSSL_VERSION}_linux_amd64" &&
-  sudo mv cfssl-bundle_${CFSSL_VERSION}_linux_amd64 /usr/local/bin/cfssl
-  sudo chown root:root /usr/local/bin/cfssl
-  sudo chmod +x /usr/local/bin/cfssl
+  if cfssl &>/dev/null; then
+    CFSSL_VERSION=1.6.5
+    curl -fsSLO "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssl-bundle_${CFSSL_VERSION}_linux_amd64" &&
+    sudo mv cfssl-bundle_${CFSSL_VERSION}_linux_amd64 /usr/local/bin/cfssl
+    sudo chown root:root /usr/local/bin/cfssl
+    sudo chmod 755 /usr/local/bin/cfssl
+  fi
 elif [ $OS == "Darwin" ]; then
   brew tap oleewere/repo
   $INSTALL cmctl
