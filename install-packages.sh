@@ -219,13 +219,13 @@ sudo mv kubectl-node_shell /usr/local/bin/kubectl-node_shell
 ### Install CMCTL and CFSSL
 if [ $OS == "Linux" ]; then
   CMCTL_VERSION=0.5.0
-  curl -fsSLO "https://github.com/oleewere/cmctl/releases/download/v${CMCTL_VERSION}/cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz" \ 
-  && sudo tar zxvf cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz -C /usr/local/bin cmctl
+  curl -fsSLO "https://github.com/oleewere/cmctl/releases/download/v${CMCTL_VERSION}/cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz" && 
+  sudo tar zxvf cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz -C /usr/local/bin cmctl
   rm cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz
 
   CFSSL_VERSION=1.6.5
-  curl -fsSLO "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssl-bundle_${CFSSL_VERSION}_linux_amd64" \
-  && sudo mv cfssl-bundle_${CFSSL_VERSION}_linux_amd64 /usr/local/bin/cfssl
+  curl -fsSLO "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssl-bundle_${CFSSL_VERSION}_linux_amd64" &&
+  sudo mv cfssl-bundle_${CFSSL_VERSION}_linux_amd64 /usr/local/bin/cfssl
   sudo chown root:root /usr/local/bin/cfssl
   sudo chmod +x /usr/local/bin/cfssl
 elif [ $OS == "Darwin" ]; then
