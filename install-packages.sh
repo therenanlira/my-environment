@@ -321,14 +321,14 @@ esac
 
 ## Extras Bash configurations
 rm $HOME/.extras &>/dev/null \
-&& curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/extras
+&& curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/.extras
 if ! grep -q "# Load extras" $RCFILE; then
   echo -e "\n# Load extras\ntest -f \$HOME/.extras && source \$HOME/.extras" >> $RCFILE
 fi
 
 ## Kafka tools configuration
 rm $HOME/.kafka-tools &>/dev/null \
-&& curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/main/kafka-tools
+&& curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/main/.kafka-tools
 if ! grep -q "# Load Kafka tools" $RCFILE; then
   echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $RCFILE
 fi
