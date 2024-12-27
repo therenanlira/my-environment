@@ -49,12 +49,8 @@ if python3 --version &>/dev/null; then
 fi
 
 ## Terraform alias
-if tfswitch --version &>/dev/null; then
+if tfswitch --version &>/dev/null || terraform --version &>/dev/null; then
   alias tfswitch="tfswitch -b $HOME/.bin/terraform"
-  tfswitch -b $HOME/.bin/terraform 1.9.5
-fi
-
-if terraform --version &>/dev/null; then
   alias tf="terraform"
   alias tfp="terraform plan -out=plan.tfplan --parallelism 2000"
   alias tfa="terraform apply 'plan.tfplan'"
