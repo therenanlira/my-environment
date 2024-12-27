@@ -22,8 +22,10 @@ test ! -f $HOME/.vimrc && echo -e 'set ic\nset nu\nset cul\nset cuc\nset bg=dark
 ## Configure git
 if [ -z "$(git config --global user.name)" ] || [ -z "$(git config --global user.email)" ]; then
   echo -e "\n\n\n########## Configuring git... ##########\n\n\n"
-  read -p "Your name: " name
-  read -p "Your GitHub email: " email
+  echo -n "Enter your name: "
+  read name
+  echo -n "Enter your GitHub email: "
+  read email
   git config --global user.name "$name"
   git config --global user.email "$email"
 fi
@@ -55,6 +57,7 @@ if ! fzf --version &>/dev/null; then
 fi
 
 ## Install krew
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 if ! kubectl krew version &>/dev/null; then
   (
     set -x; cd "$(mktemp -d)" &&
@@ -65,7 +68,6 @@ if ! kubectl krew version &>/dev/null; then
     tar zxvf "${KREW}.tar.gz" &&
     ./"${KREW}" install krew
   )
-  export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 fi
 
 ## Install kubectl-node-shell
@@ -107,15 +109,17 @@ if ! e1s --version &>/dev/null; then
 fi
 
 ## Extras Bash configurations
-rm $HOME/.extras &>/dev/null \
-&& curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/extras
+echo -e "\n\n\n########## Updating extras... ##########\n\n\n"
+rm $HOME/.extras &>/dev/null
+curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/extras
 if ! grep -q "# Load extras" $HOME/.zshrc; then
   echo -e "\n# Load extras\ntest -f \$HOME/.extras && source \$HOME/.extras" >> $HOME/.zshrc
 fi
 
 ## Kafka tools configuration
-rm $HOME/.kafka-tools &>/dev/null \
-&& curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/main/kafka-tools
+echo -e "\n\n\n########## Updating Kafka tools... ##########\n\n\n"
+rm $HOME/.kafka-tools &>/dev/null
+curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/main/kafka-tools
 if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
   echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
 fi
