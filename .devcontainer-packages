@@ -32,9 +32,9 @@ fi
 
 ## Install and configure bash-it or zsh and themes
 if [ $SHELL = "/bin/zsh" ]; then
-  test ! -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting || git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
-  test ! -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      || git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-  test ! -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+  test ! -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting && git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
+  test ! -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      && git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
+  test ! -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
 
   grep -q "source $ZSH/oh-my-zsh.sh" $HOME/.zshrc || echo -e "source $ZSH/oh-my-zsh.sh" >> $HOME/.zshrc
 
