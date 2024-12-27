@@ -19,7 +19,6 @@ fi
 ## Identify the shell
 test $OS = "Linux" && test $SHELL = "/bin/bash" && RCFILE=$HOME/.bashrc
 test $OS = "Darwin" && test $SHELL = "/bin/bash" && RCFILE=$HOME/.bash_profile
-
 test $SHELL = "/bin/zsh" && RCFILE=$HOME/.zshrc
 
 ## Update and install basic packages
@@ -48,11 +47,13 @@ test ! -f $HOME/.vimrc && echo -e 'set ic\nset nu\nset cul\nset cuc\nset bg=dark
 $INSTALL watch whois nmap
 
 ## Configure git
-echo -e "\n\n\n########## Configuring git... ##########\n\n\n"
-read -p "Your name: " name
-read -p "Your GitHub email: " email
-git config --global user.name $name
-git config --global user.email $email 
+if ! git config --global user.name &>/dev/null || ! git config --global user.email &>/dev/null; then
+  echo -e "\n\n\n########## Configuring git... ##########\n\n\n"
+  read -p "Your name: " name
+  read -p "Your GitHub email: " email
+  git config --global user.name "$name"
+  git config --global user.email "$email"
+fi
 
 ## Install and configure bash-it or zsh and themes
 if [ $SHELL == "/bin/bash" ]; then
@@ -64,12 +65,11 @@ if [ $SHELL == "/bin/bash" ]; then
   source $RCFILE
 elif [ $SHELL == "/bin/zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-  git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
-  git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-  git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  
-  echo -e "source $ZSH/oh-my-zsh.sh" >> $RCFILE
-  echo -e "source $ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh" >> $RCFILE
-  echo -e "source $ZSH_CUSTOM/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh" >> $RCFILE
+  test -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting || git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
+  test -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      || git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
+  test -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+
+  grep -q "source $ZSH/oh-my-zsh.sh" $RCFILE || echo -e "source $ZSH/oh-my-zsh.sh" >> $RCFILE
 
   new_plugins=("aws" "git" "zsh-syntax-highlighting" "zsh-autosuggestions" "fast-syntax-highlighting" "virtualenv" "docker" "docker-compose")
   current_plugins=$(grep -oP '(?<=^plugins=\().*(?=\))' $RCFILE)
@@ -78,7 +78,7 @@ elif [ $SHELL == "/bin/zsh" ]; then
       current_plugins+=" ${plugin}"
     fi
   done
-  sed -i '' "s/^plugins=(.*)/plugins=(${current_plugins})/" $RCFILE
+  sed -i "s/^plugins=(.*)/plugins=(${current_plugins})/" $RCFILE
 fi
 
 ## Install programming languages
@@ -236,12 +236,11 @@ fi
 
 ## Install e1s
 if [ $OS == "Linux" ]; then
-  E1S_VERSION=1.0.34
-  E1S_OS=linux_amd64
-  E1S_URL=https://github.com/keidarcy/e1s/releases/download/v$E1S_VERSION/e1s_$E1S_VERSION\_$E1S_OS.tar.gz
+  E1S_VERSION="1.0.34"
+  E1S_OS="linux_amd64"
 
-  curl -fsSLO $E1S_URL \
-  && sudo tar zxvf e1s_$E1S_VERSION\_$E1S_OS.tar.gz -C /usr/local/bin e1s
+  curl -fsSLO https://github.com/keidarcy/e1s/releases/download/v$E1S_VERSION/e1s_$E1S_VERSION\_$E1S_OS.tar.gz
+  sudo tar zxvf e1s_$E1S_VERSION\_$E1S_OS.tar.gz -C /usr/local/bin e1s
   sudo chown root:root /usr/local/bin/e1s
   sudo chmod +x /usr/local/bin/e1s
   rm e1s_$E1S_VERSION\_$E1S_OS.tar.gz
