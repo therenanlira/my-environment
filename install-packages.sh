@@ -212,9 +212,9 @@ fi
 ### Install kubectl-node-shell
 kubectl krew install neat
 curl -LO https://github.com/kvaps/kubectl-node-shell/raw/master/kubectl-node_shell
-sudo chown root:root ./kubectl-node_shell
-sudo chmod +x ./kubectl-node_shell
-sudo mv ./kubectl-node_shell /usr/local/bin/kubectl-node_shell
+sudo chown root:root kubectl-node_shell
+sudo chmod +x kubectl-node_shell
+sudo mv kubectl-node_shell /usr/local/bin/kubectl-node_shell
 
 ### Install CMCTL and CFSSL
 if [ $OS == "Linux" ]; then
