@@ -84,9 +84,12 @@ if [ $SHELL == "/bin/bash" ]; then
   source $RCFILE
 elif [ $SHELL == "/bin/zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-  test ! -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting && git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
-  test ! -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      && git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-  test ! -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+
+  export ZSH_CUSTOM=$HOME/.oh-my-zsh/custom
+
+  test -d $ZSH_CUSTOM/plugins/fast-syntax-highlighting || git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
+  test -d $ZSH_CUSTOM/plugins/zsh-autosuggestions      || git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
+  test -d $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
 
   grep -q "source $ZSH/oh-my-zsh.sh" $RCFILE || echo -e "source $ZSH/oh-my-zsh.sh" >> $RCFILE
 
