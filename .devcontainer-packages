@@ -56,6 +56,14 @@ if ! fzf --version &>/dev/null; then
   source <(fzf --zsh)
 fi
 
+## Install TFSwitch (Terraform version manager)
+if ! tfswitch --version &>/dev/null; then
+  wget https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh
+  chmod 755 install.sh
+  ./install.sh -b /usr/local/bin
+  rm install.sh
+fi
+
 ## Install krew
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 if ! kubectl krew version &>/dev/null; then
