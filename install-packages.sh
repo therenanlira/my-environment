@@ -66,8 +66,10 @@ $INSTALL watch whois nmap
 ## Configure git
 if [ -z "$(git config --global user.name)" ] || [ -z "$(git config --global user.email)" ]; then
   echo -e "\n\n\n########## Configuring git... ##########\n\n\n"
-  read -p "Your name: " name
-  read -p "Your GitHub email: " email
+  echo -n "Enter your name: "
+  read name
+  echo -n "Enter your GitHub email: "
+  read email
   git config --global user.name "$name"
   git config --global user.email "$email"
 fi
@@ -222,6 +224,7 @@ elif [ $OS == "Darwin" ]; then
 fi
 
 ## Install krew
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 if ! kubectl krew version &>/dev/null; then
   (
     set -x; cd "$(mktemp -d)" &&
@@ -232,7 +235,6 @@ if ! kubectl krew version &>/dev/null; then
     tar zxvf "${KREW}.tar.gz" &&
     ./"${KREW}" install krew
   )
-  export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 fi
 
 ## Install kubectl-node-shell
