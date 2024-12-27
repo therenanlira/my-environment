@@ -18,6 +18,7 @@ export HOMEBREW_EDITOR=vim
 
 ## Kubernetes cheats
 test -f $HOME/.krew/bin/kubectl-krew && export PATH="$PATH:${HOME}/.local/bin:${HOME}/.krew/bin"
+test -f $HOME/.krew/bin/kubectl-krew && export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 test -f $HOME/.kube/config && test -f $HOME/.kube/azure/config && export KUBECONFIG=$HOME/.kube/config:$HOME/.kube/azure/config
 
 alias k=kubectl kx=kubectx kn=kubens
