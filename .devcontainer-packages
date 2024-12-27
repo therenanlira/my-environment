@@ -1,0 +1,123 @@
+#!/bin/zsh
+
+## Install initial packages
+PACKAGES=("figlet" "ed" "jq" "curl" "git" "gawk" "unzip" "vim" "procps" "whois" "nmap")
+
+for package in "${PACKAGES[@]}"; do
+  if ! dpkg -l | grep -q "^ii  $package "; then
+    test "$package" = "${PACKAGES[0]}" && sudo apt update
+    sudo apt install -y $package
+  fi
+done
+ 
+exit
+
+## Install TLDR
+if ! tldr --version &>/dev/null; then
+  sudo rm -rf /usr/local/share/nvm/versions/node/v20.18.1/lib/node_modules/tldr
+  npm install -g tldr
+fi
+
+## Configure vim
+test ! -f $HOME/.vimrc && echo -e 'set ic\nset nu\nset cul\nset cuc\nset bg=dark' >> $HOME/.vimrc
+
+## Configure git
+if [ -z "$(git config --global user.name)" ] || [ -z "$(git config --global user.email)" ]; then
+  echo -e "\n\n\n########## Configuring git... ##########\n\n\n"
+  read -p "Your name: " name
+  read -p "Your GitHub email: " email
+  git config --global user.name "$name"
+  git config --global user.email "$email"
+fi
+
+## Install and configure bash-it or zsh and themes
+if [ $SHELL = "/bin/zsh" ]; then
+  test ! -f $ZSH_CUSTOM/plugins/fast-syntax-highlighting || git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $ZSH_CUSTOM/plugins/fast-syntax-highlighting
+  test ! -f $ZSH_CUSTOM/plugins/zsh-autosuggestions      || git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
+  test ! -f $ZSH_CUSTOM/plugins/zsh-syntax-highlighting  || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+
+  grep -q "source $ZSH/oh-my-zsh.sh" $HOME/.zshrc || echo -e "source $ZSH/oh-my-zsh.sh" >> $HOME/.zshrc
+
+  new_plugins="aws git zsh-syntax-highlighting zsh-autosuggestions fast-syntax-highlighting virtualenv docker docker-compose"
+  current_plugins=$(grep -oP '(?<=^plugins=\().*(?=\))' $HOME/.zshrc)
+  for plugin in "${new_plugins[@]}"; do
+    if [[ ! " ${current_plugins[@]} " =~ " ${plugin} " ]]; then
+      current_plugins+=" ${plugin}"
+    fi
+  done
+  sed -i "s/^plugins=(.*)/plugins=(${current_plugins})/" $HOME/.zshrc
+fi
+
+## Install FZF
+if ! fzf --version &>/dev/null; then
+  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+  $HOME/.fzf/install
+  source $HOME/.zshrc
+  source <(fzf --zsh)
+fi
+
+## Install krew
+if ! kubectl krew version &>/dev/null; then
+  (
+    set -x; cd "$(mktemp -d)" &&
+    OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+    ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+    KREW="krew-${OS}_${ARCH}" &&
+    curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+    tar zxvf "${KREW}.tar.gz" &&
+    ./"${KREW}" install krew
+  )
+  export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+fi
+
+## Install kubectl-node-shell
+if ! kubectl node-shell --version &>/dev/null; then
+  kubectl krew install neat
+  curl -LO https://github.com/kvaps/kubectl-node-shell/raw/master/kubectl-node_shell
+  sudo chown root:root kubectl-node_shell
+  sudo chmod +x kubectl-node_shell
+  sudo mv kubectl-node_shell /usr/local/bin/kubectl-node_shell
+fi
+
+## Install CMCTL
+if ! cmctl --version &>/dev/null; then
+  CMCTL_VERSION=0.5.0
+  curl -fsSLO "https://github.com/oleewere/cmctl/releases/download/v${CMCTL_VERSION}/cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz" && 
+  sudo tar zxvf cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz -C /usr/local/bin cmctl
+  rm cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz
+fi
+
+## Install CFSSL
+if ! cfssl &>/dev/null; then
+  CFSSL_VERSION=1.6.5
+  curl -fsSLO "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssl-bundle_${CFSSL_VERSION}_linux_amd64" &&
+  sudo mv cfssl-bundle_${CFSSL_VERSION}_linux_amd64 /usr/local/bin/cfssl
+  sudo chown root:root /usr/local/bin/cfssl
+  sudo chmod 755 /usr/local/bin/cfssl
+fi
+
+## Install e1s
+if ! e1s --version &>/dev/null; then
+  E1S_VERSION="1.0.34"
+  E1S_OS="linux_amd64"
+
+  curl -fsSLO https://github.com/keidarcy/e1s/releases/download/v$E1S_VERSION/e1s_$E1S_VERSION\_$E1S_OS.tar.gz
+  sudo tar zxvf e1s_$E1S_VERSION\_$E1S_OS.tar.gz -C /usr/local/bin e1s
+  sudo chown root:root /usr/local/bin/e1s
+  sudo chmod +x /usr/local/bin/e1s
+  rm e1s_$E1S_VERSION\_$E1S_OS.tar.gz
+fi
+
+## Extras Bash configurations
+rm $HOME/.extras &>/dev/null \
+&& curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/extras &>/dev/null
+if ! grep -q "# Load extras" $HOME/.zshrc; then
+  echo -e "\n# Load extras\ntest -f \$HOME/.extras && source \$HOME/.extras" >> $HOME/.zshrc
+fi
+
+## Kafka tools configuration
+rm $HOME/.kafka-tools &>/dev/null \
+&& curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/main/kafka-tools &>/dev/null
+if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
+  echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
+fi
