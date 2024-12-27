@@ -60,8 +60,9 @@ fi
 if ! tfswitch --version &>/dev/null; then
   wget https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh
   chmod 755 install.sh
-  ./install.sh -b /usr/local/bin
+  ./install.sh -b $HOME/.bin
   rm install.sh
+  tfswitch -b $HOME/.bin/terraform 1.9.5
 fi
 
 ## Install krew
