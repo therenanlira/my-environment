@@ -31,12 +31,29 @@ if [ $OS == "Linux" ]; then
     INSTALL="sudo dnf install -y"
   fi
 elif [ $OS == "Darwin" ]; then
-    test ! -f /opt/homebrew/bin/brew && install_homebrew
-    INSTALL="brew install"
+  test ! -f /opt/homebrew/bin/brew && install_homebrew
+  INSTALL="brew install"
 fi
 
 ## Install initial packages
-$INSTALL neofetch figlet ed jq wget curl git gawk make unzip
+PACKAGES=("neofetch" "figlet" "ed" "jq" "curl" "git" "gawk" "make" "unzip" "vim" "procps" "whois" "nmap")
+for package in "${PACKAGES[@]}"; do
+  if [ $OS == "Darwin" ]; then
+    if ! brew list --formula | grep -q "^$package\$"; then
+      $INSTALL $package
+    fi
+  elif [ $OS == "Linux" ]; then
+    if [ $DISTRO == "debian" ]; then
+      if ! dpkg -l | grep -q "^ii  $package "; then
+        $INSTALL $package
+      fi
+    elif [ $DISTRO == "rhel" ]; then
+      if ! rpm -q $package &>/dev/null; then
+        $INSTALL $package
+      fi
+    fi
+  fi
+done
 
 ## Configure vim
 $INSTALL vim
