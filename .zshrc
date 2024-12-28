@@ -1,5 +1,7 @@
-# Set up the shell
+# Set up the shell environment
 export ZSH="$HOME/.oh-my-zsh"
+# export PATH=$PATH:$HOME/.bin:$HOME/bin
+export SHELL=/bin/zsh
 
 # Set up the theme
 ZSH_THEME="devcontainers"
@@ -13,9 +15,6 @@ source $ZSH/oh-my-zsh.sh
 # Set up the environment
 DISABLE_AUTO_UPDATE=true
 DISABLE_UPDATE_PROMPT=true
-
-# Update default Shell
-export SHELL=/bin/zsh
 
 # Load extras
 test -f $HOME/.extras && source $HOME/.extras
