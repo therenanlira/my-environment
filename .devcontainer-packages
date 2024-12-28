@@ -132,3 +132,6 @@ rm $HOME/.kafka-tools &>/dev/null \
 if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
   echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
 fi
+
+## Load the new configurations
+source $HOME/.zshrc
