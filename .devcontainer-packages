@@ -64,7 +64,7 @@ if ! tfswitch --version &>/dev/null; then
   chmod 755 install.sh
   ./install.sh -b $HOME/.bin
   rm install.sh
-  tfswitch -b $HOME/.bin/terraform 1.9.5
+  export PATH=$HOME/.bin:$PATH
 fi
 
 ## Install krew
@@ -120,6 +120,11 @@ if ! e1s --version &>/dev/null; then
 fi
 
 ## Extras Bash configurations
+if ! grep -q "# Update default Shell" $HOME/.zshrc; then
+  echo -e "\n# Update default Shell\nexport SHELL=/bin/zsh" >> $HOME/.zshrc
+fi
+
+## Extras Bash configurations
 rm $HOME/.extras &>/dev/null \
 && curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.extras
 if ! grep -q "# Load extras" $HOME/.zshrc; then
@@ -133,5 +138,5 @@ if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
   echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
 fi
 
-## Load the new configurations
+## Load configurations
 source $HOME/.zshrc
