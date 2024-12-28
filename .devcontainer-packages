@@ -30,7 +30,7 @@ if [ -z "$(git config --global user.name)" ] || [ -z "$(git config --global user
   git config --global user.email "$email"
 fi
 
-## Install and configure bash-it or zsh and themes
+## Install and configure oh-my-zsh and themes
 if [ $SHELL = "/bin/zsh" ]; then
   export ZSH_CUSTOM=$HOME/.oh-my-zsh/custom
 
@@ -40,7 +40,7 @@ if [ $SHELL = "/bin/zsh" ]; then
 
   grep -q "source $ZSH/oh-my-zsh.sh" $HOME/.zshrc || echo -e "source $ZSH/oh-my-zsh.sh" >> $HOME/.zshrc
 
-  new_plugins="aws git zsh-syntax-highlighting zsh-autosuggestions fast-syntax-highlighting virtualenv docker docker-compose"
+  new_plugins="git aws virtualenv docker docker-compose zsh-syntax-highlighting zsh-autosuggestions fast-syntax-highlighting"
   current_plugins=$(grep -oP '(?<=^plugins=\().*(?=\))' $HOME/.zshrc)
   for plugin in "${new_plugins[@]}"; do
     if [[ ! " ${current_plugins[@]} " =~ " ${plugin} " ]]; then
@@ -63,8 +63,7 @@ if ! tfswitch --version &>/dev/null; then
   wget https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh
   chmod 755 install.sh
   ./install.sh -b $HOME/.bin
-  rm install.sh
-  export PATH=$HOME/.bin:$PATH
+  export PATH=$PATH:$HOME/.bin
 fi
 
 ## Install krew
@@ -119,12 +118,12 @@ if ! e1s --version &>/dev/null; then
   rm e1s_$E1S_VERSION\_$E1S_OS.tar.gz
 fi
 
-## Extras Bash configurations
+## Update default shell
 if ! grep -q "# Update default Shell" $HOME/.zshrc; then
   echo -e "\n# Update default Shell\nexport SHELL=/bin/zsh" >> $HOME/.zshrc
 fi
 
-## Extras Bash configurations
+## Extras shell configurations
 rm $HOME/.extras &>/dev/null \
 && curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.extras
 if ! grep -q "# Load extras" $HOME/.zshrc; then
