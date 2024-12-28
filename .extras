@@ -89,7 +89,7 @@ if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
   # Function to update the RPROMPT
   function update_aws_prompt() {
       zmodload zsh/parameter
-      test "$ZSH_THEME" = "devcontainers" || RPROMPT='$(aws_prompt_info)'
+      RPROMPT='$(aws_prompt_info)'
       zle && zle reset-prompt
   }
 
@@ -99,7 +99,7 @@ if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
   }
 
   # RPROMPT configuration
-  test "$ZSH_THEME" = "devcontainers" || RPROMPT='$(aws_prompt_info)'
+  RPROMPT='$(aws_prompt_info)'
   AWS_PROFILE_STATE_ENABLED=true
   
   # Function to delete ECR images
@@ -136,7 +136,7 @@ elif [ $SHELL = "/bin/zsh" ]; then
   source <(kubectl completion zsh)
   autoload -Uz compinit && compinit
 
-  test "$ZSH_THEME" = "devcontainers" || RPROMPT=$(aws_prompt_info)
+  RPROMPT=$(aws_prompt_info)
 fi
 
 ## OpenVPN
