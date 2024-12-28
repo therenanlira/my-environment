@@ -63,7 +63,9 @@ if ! tfswitch --version &>/dev/null; then
   wget https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh
   chmod 755 install.sh
   ./install.sh -b $HOME/.bin
-  export PATH=$PATH:$HOME/.bin
+  rm ./install.sh
+  tfswitch -b $HOME/.bin/terraform 1.9.0
+  export PATH=$PATH:$HOME/.bin:$HOME/bin
 fi
 
 ## Install krew
