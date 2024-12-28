@@ -49,7 +49,7 @@ if python3 --version &>/dev/null; then
 fi
 
 ## Terraform alias
-if tfswitch --version &>/dev/null || terraform --version &>/dev/null; then
+if [ -f /usr/local/bin/tfswitch ] || [ -f /usr/local/bin/terraform ]; then
   alias tfswitch="tfswitch -b $HOME/.bin/terraform"
   alias tf="terraform"
   alias tfp="terraform plan -out=plan.tfplan --parallelism 2000"
@@ -89,7 +89,7 @@ if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
   # Function to update the RPROMPT
   function update_aws_prompt() {
       zmodload zsh/parameter
-      RPROMPT='$(aws_prompt_info)'
+      test "$ZSH_THEME" = "devcontainers" || RPROMPT='$(aws_prompt_info)'
       zle && zle reset-prompt
   }
 
@@ -99,7 +99,7 @@ if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
   }
 
   # RPROMPT configuration
-  RPROMPT='$(aws_prompt_info)'
+  test "$ZSH_THEME" = "devcontainers" || RPROMPT='$(aws_prompt_info)'
   AWS_PROFILE_STATE_ENABLED=true
   
   # Function to delete ECR images
@@ -136,7 +136,7 @@ elif [ $SHELL = "/bin/zsh" ]; then
   source <(kubectl completion zsh)
   autoload -Uz compinit && compinit
 
-  RPROMPT=$(aws_prompt_info)
+  test "$ZSH_THEME" = "devcontainers" || RPROMPT=$(aws_prompt_info)
 fi
 
 ## OpenVPN
