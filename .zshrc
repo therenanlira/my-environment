@@ -4,7 +4,7 @@ export ZSH="$HOME/.oh-my-zsh"
 export SHELL=/bin/zsh
 
 # Set up the theme
-ZSH_THEME="devcontainers"
+ZSH_THEME="xiong-chiamiov-plus"
 
 # Set up the plugins
 plugins=(git aws virtualenv docker docker-compose zsh-syntax-highlighting zsh-autosuggestions fast-syntax-highlighting)
