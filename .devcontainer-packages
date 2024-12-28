@@ -127,14 +127,14 @@ fi
 
 ## Extras shell configurations
 rm $HOME/.extras &>/dev/null \
-&& curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.extras
+&& wget -O $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.extras
 if ! grep -q "# Load extras" $HOME/.zshrc; then
   echo -e "\n# Load extras\ntest -f \$HOME/.extras && source \$HOME/.extras" >> $HOME/.zshrc
 fi
 
 ## Kafka tools configuration
 rm $HOME/.kafka-tools &>/dev/null \
-&& curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.kafka-tools
+&& wget -O $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.kafka-tools
 if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
   echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
 fi
