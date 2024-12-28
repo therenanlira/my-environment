@@ -120,17 +120,15 @@ if ! e1s --version &>/dev/null; then
 fi
 
 ## Extras Bash configurations
-echo -e "\n\n\n########## Updating extras... ##########\n\n\n"
-rm $HOME/.extras &>/dev/null
-curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/main/extras
-if ! grep -q "# Load extras" $HOME/.zshrc; then
-  echo -e "\n# Load extras\ntest -f \$HOME/.extras && source \$HOME/.extras" >> $HOME/.zshrc
+rm $HOME/.extras &>/dev/null \
+&& curl -o $HOME/.extras https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.extras
+if ! grep -q "# Load extras" $RCFILE; then
+  echo -e "\n# Load extras\ntest -f \$HOME/.extras && source \$HOME/.extras" >> $RCFILE
 fi
 
 ## Kafka tools configuration
-echo -e "\n\n\n########## Updating Kafka tools... ##########\n\n\n"
-rm $HOME/.kafka-tools &>/dev/null
-curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/main/kafka-tools
-if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
-  echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
+rm $HOME/.kafka-tools &>/dev/null \
+&& curl -o $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.kafka-tools
+if ! grep -q "# Load Kafka tools" $RCFILE; then
+  echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $RCFILE
 fi
