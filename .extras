@@ -5,7 +5,7 @@ export PATH=$PATH:$HOME/.bin
 alias ll="ls -alF"
 
 ## Theme configuration
-if [ $SHELL = "/bin/zsh" ]; then
+if [[ $SHELL == *"zsh"* ]]; then
   ZSH_THEME_CONFIG=("s/e\[1;32m/e\[1;36m/g" ~/.oh-my-zsh/themes/xiong-chiamiov-plus.zsh-theme;)
   test $(uname -s) = "Darwin" && sed -i "" $ZSH_THEME_CONFIG;
   test $(uname -s) = "Linux" && sed -i $ZSH_THEME_CONFIG;
@@ -73,7 +73,7 @@ if pulumi --version &>/dev/null; then
 fi
 
 ## AWS alias
-if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
+if [[ $SHELL == *"zsh"* ]] && aws --version &>/dev/null; then
   # Functions to redefine export and update the prompt
   function my_export() {
       builtin export "$@"
@@ -98,7 +98,7 @@ if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
 
   # RPROMPT configuration
   test "$ZSH_THEME" = "devcontainers" || RPROMPT='$(aws_prompt_info)'
-  AWS_PROFILE_STATE_ENABLED=true
+  export AWS_PROFILE_STATE_ENABLED=true
   
   # Function to delete ECR images
   function delete_ecr_images() {
@@ -120,7 +120,7 @@ if [ $SHELL = "/bin/zsh" ] && aws --version &>/dev/null; then
 fi
 
 ## Shell configuration
-if [ $SHELL = "/bin/bash" ]; then
+if [[ $SHELL == *"bash"* ]]; then
 
   test -z brew --version && test $(uname -s) = "Darwin" \
   && brew_etc="$(brew --prefix)/etc" \
@@ -129,7 +129,7 @@ if [ $SHELL = "/bin/bash" ]; then
   source <(kubectl completion bash)
   complete -o default -F __start_kubectl k
 
-elif [ $SHELL = "/bin/zsh" ]; then
+elif [[ $SHELL == *"zsh"* ]]; then
 
   source <(kubectl completion zsh)
   autoload -Uz compinit && compinit
