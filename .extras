@@ -43,7 +43,7 @@ fi
 ## Python
 if python3 --version &>/dev/null; then
   alias py=python3
-  test ! -f /usr/bin/python && sudo ln -s /usr/bin/python3 /usr/bin/python
+  test ! -f /usr/bin/python3 && test ! -f /usr/bin/python && sudo ln -s /usr/bin/python3 /usr/bin/python
 
   test -f /usr/local/bin/virtualenvwrapper.sh \
   && export WORKON_HOME=~/.virtualenvs \
