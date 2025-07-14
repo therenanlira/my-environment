@@ -20,6 +20,10 @@ if brew --version &>/dev/null; then
   export HOMEBREW_EDITOR=vim
 fi
 
+## Git alias
+git config --global alias.task '!f() { if [ "$1" != "no-ref" ] && ! [ "$1" -eq "$1" ] 2>/dev/null || [ -z "$2" ]; then echo "Invalid parameters. Usage: git task <number|no-ref> <description>"; exit 1; fi; git fetch && git checkout -b "task/$1-$2" && git push -u origin "task/$1-$2"; }; f'
+git config --global alias.acp '!f() { if [ -z "$1" ]; then echo "Usage: git acp <commit-message>"; exit 1; fi; git add . && git commit -m "$1" && git push origin HEAD; }; f'
+
 ## Kubernetes cheats
 if kubectl version &>/dev/null; then
   alias k="kubectl"

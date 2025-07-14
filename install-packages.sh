@@ -38,11 +38,7 @@ fi
 ## Install initial packages
 PACKAGES=("neofetch" "figlet" "ed" "jq" "curl" "git" "gawk" "make" "unzip" "vim" "procps" "whois" "nmap")
 for package in "${PACKAGES[@]}"; do
-  if [ $OS == "Darwin" ]; then
-    if ! brew list --formula | grep -q "^$package\$"; then
-      $INSTALL $package
-    fi
-  elif [ $OS == "Linux" ]; then
+  if [ $OS == "Linux" ]; then
     if [ $DISTRO == "debian" ]; then
       if ! dpkg -l | grep -q "^ii  $package "; then
         $INSTALL $package
@@ -51,6 +47,10 @@ for package in "${PACKAGES[@]}"; do
       if ! rpm -q $package &>/dev/null; then
         $INSTALL $package
       fi
+    fi
+  elif [ $OS == "Darwin" ]; then
+    if ! brew list --formula | grep -q "^$package\$"; then
+      $INSTALL $package
     fi
   fi
 done
@@ -153,6 +153,22 @@ if [ $OS == "Linux" ]; then
   mv terraform-docs /usr/local/bin/terraform-docs
 else
   $INSTALL terraform-docs
+fi
+
+## Install Packer
+if [ $OS == "Linux" ]; then
+  if [ $DISTRO == "debian" ]; then
+    wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt update && sudo apt install packer
+  elif [ $DISTRO == "rhel" ]; then
+    sudo yum install -y yum-utils
+    sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+    sudo yum -y install packer
+  fi
+elif [ $OS == "Darwin" ]; then
+  brew tap hashicorp/tap
+  $INSTALL hashicorp/tap/packer
 fi
 
 ## Install AWS CLI
