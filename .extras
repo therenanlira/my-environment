@@ -4,6 +4,14 @@ export PATH=$PATH:$HOME/.bin
 ## Basic aliases
 alias ll="ls -alF"
 
+## ssh-agent to load keys
+KEYS=$(ls ~/.ssh | grep -v -E '^known_hosts|\.pub$')
+for key in @{KEYS}; do
+  if [[ -f ~/.ssh/$key && ! -L ~/.ssh/$key ]]; then
+    ssh-add ~/.ssh/$key 2>/dev/null
+  fi
+done
+
 ## Theme configuration
 if [[ $SHELL == *"zsh"* ]]; then
   ZSH_THEME_CONFIG=("s/e\[1;32m/e\[1;36m/g" ~/.oh-my-zsh/themes/xiong-chiamiov-plus.zsh-theme;)
