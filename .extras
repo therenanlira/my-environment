@@ -113,10 +113,12 @@ if [[ $SHELL == *"zsh"* ]] && aws --version &>/dev/null; then
     local region=$1
     local repository=$2
 
-    aws ecr list-images --region "$region" --repository-name "$repository" --query 'imageIds[*]' --output json | \
-    jq -c '.[] | if .imageTag == null then [{imageDigest: .imageDigest}] else [{imageDigest: .imageDigest, imageTag: .imageTag}] end' | \
-    while read -r image; do
-        aws ecr batch-delete-image --region "$region" --repository-name "$repo" --image-ids "$image" > /dev/null 2>&1
+    # Using array to properly handle multiple images
+    local images=($(aws ecr list-images --region "$region" --repository-name "$repository" --query 'imageIds[*]' --output json | \
+    jq -r '.[] | .imageDigest'))
+
+    for image in "${images[@]}"; do
+      aws ecr batch-delete-image --region "$region" --repository-name "$repository" --image-ids imageDigest="$image" > /dev/null 2>&1
     done
   }
 fi
