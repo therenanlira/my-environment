@@ -177,3 +177,65 @@ delete_empty_topics() {
       ;;
   esac
 }
+
+audit_segment_configs() {
+  ensure_broker_env || return 1
+
+  echo "Auditando tópicos com configurações de segment potencialmente problemáticas..."
+  
+  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
+    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+    echo 'security.protocol=SSL' > broker.config
+    
+    # Obtém lista de tópicos, filtrando tópicos internos
+    topics=\$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list | grep -v '^__' | grep -v '^_confluent' | grep -v '^_schemas')
+    
+    problematic_topics=\"\"
+    
+    for topic in \$topics; do
+      echo \"=== Verificando tópico: \$topic ===\"
+      configs=\$(kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --entity-type topics --entity-name \$topic --describe | grep -E '(segment\\.bytes|segment\\.ms)')
+      
+      is_problematic=false
+      
+      if [ -n \"\$configs\" ]; then
+        echo \"\$configs\"
+        
+        # Verifica segment.bytes < 125MB (131072000 bytes)
+        segment_bytes=\$(echo \"\$configs\" | grep 'segment.bytes' | sed 's/.*segment.bytes=\\([0-9]*\\).*/\\1/')
+        if [ -n \"\$segment_bytes\" ] && [ \"\$segment_bytes\" -lt 131072000 ]; then
+          is_problematic=true
+        fi
+        
+        # Verifica segment.ms < 1 dia (86400000 ms)
+        segment_ms=\$(echo \"\$configs\" | grep 'segment.ms' | sed 's/.*segment.ms=\\([0-9]*\\).*/\\1/')
+        if [ -n \"\$segment_ms\" ] && [ \"\$segment_ms\" -lt 86400000 ]; then
+          is_problematic=true
+        fi
+        
+        if [ \"\$is_problematic\" = true ]; then
+          problematic_topics=\"\$problematic_topics\$topic: \$configs\n\"
+        fi
+      else
+        echo \"Usando configurações padrão (segment.bytes=1GB, segment.ms=1 semana) - OK\"
+      fi
+      echo
+    done
+    
+    echo \"=======================================\"
+    echo \"RESUMO - TÓPICOS PROBLEMÁTICOS:\"
+    echo \"=======================================\"
+    if [ -n \"\$problematic_topics\" ]; then
+      echo \"Os seguintes tópicos têm configurações abaixo do recomendado:\"
+      echo \"(segment.bytes < 125MB ou segment.ms < 1 dia)\"
+      echo
+      printf \"\$problematic_topics\"
+      echo
+      echo \"AÇÃO NECESSÁRIA: Ajustar as configurações destes tópicos.\"
+      echo \"Recomendado: segment.bytes >= 125MB (131072000) e segment.ms >= 1 dia (86400000)\"
+    else
+      echo \"✅ Nenhum tópico problemático encontrado!\"
+      echo \"Todos os tópicos estão usando configurações seguras.\"
+    fi
+  "
+}
