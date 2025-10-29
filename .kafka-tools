@@ -300,3 +300,44 @@ audit_segment_configs() {
     fi
   "
 }
+
+list_compact_only_topics() {
+  ensure_broker_env || return 1
+
+  echo "Listando tópicos internos que usam apenas 'compact'..."
+  
+  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
+    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+    echo 'security.protocol=SSL' > broker.config
+    
+    # Listar tópicos internos
+    internal_topics=\$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list | grep -E '(changelog|repartition|_confluent)')
+    
+    if [ -z \"\$internal_topics\" ]; then
+      echo \"Nenhum tópico interno encontrado.\"
+      exit 0
+    fi
+    
+    echo \"Tópicos encontrados:\"
+    echo \"\$internal_topics\"
+    echo
+    
+    echo \"Aplicando compact,delete para cada tópico...\"
+    echo
+    
+    # Aplicar compact,delete para cada tópico
+    for topic in \$internal_topics; do
+      echo \"Updating \$topic...\"
+      
+      if kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --entity-type topics --entity-name \"\$topic\" --alter --add-config cleanup.policy=compact,delete; then
+        echo \"✅ \$topic atualizado com sucesso\"
+      else
+        echo \"❌ Erro ao atualizar \$topic\"
+      fi
+      
+      echo
+    done
+    
+    echo \"Script concluído!\"
+  "
+}
