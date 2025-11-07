@@ -30,53 +30,33 @@ ensure_consumer_env() {
 list_kafka_topics() {
   ensure_broker_env || return 1
 
-  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
-    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
-    echo 'security.protocol=SSL' > broker.config
-    kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list
-  "
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
+  kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --list
 }
 
 # Function to list Kafka consumers
 list_kafka_consumers() {
   ensure_broker_env || return 1
 
-  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
-    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
-    echo 'security.protocol=SSL' > broker.config
-    kafka-consumer-groups --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list
-  "
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
+  kafka-consumer-groups --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --list
 }
 
 # Function to delete Kafka topics from stdin
 delete_kafka_topics() {
   ensure_broker_env || return 1
 
-  # Start by creating a temporary script file
-  script_file=$(mktemp)
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
 
-  # Add a shebang and any initial setup commands
-  echo "#!/bin/sh" > "$script_file"
-  echo "export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'" >> "$script_file"
-  echo "echo 'security.protocol=SSL' > broker.config" >> "$script_file"
-
-  # Accumulate all topic deletion commands into the script
+  # Delete topics from stdin
   while IFS= read -r topic; do
-    cat <<EOF >> "$script_file"
-if kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --delete --topic "${topic}"; then
-  echo "${topic}"
-fi
-EOF
+    if kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --delete --topic "${topic}"; then
+      echo "${topic}"
+    fi
   done
-
-  # Make the script executable
-  chmod +x "$script_file"
-
-  # Execute the script inside a Docker container
-  docker run --rm -i -v "$script_file:/delete_topics.sh" --entrypoint=/bin/sh confluentinc/cp-kafka:latest /delete_topics.sh
-
-  # Clean up the temporary script file
-  rm "$script_file"
 }
 
 # Function to describe Kafka log directories
@@ -85,11 +65,9 @@ describe_kafka_topic_log() {
   ensure_topic_env || return 1
   local TOPIC=$1
 
-  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
-    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
-    echo 'security.protocol=SSL' > broker.config
-    kafka-log-dirs --describe --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --topic-list $TOPIC
-  "
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
+  kafka-log-dirs --describe --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --topic-list $TOPIC
 }
 
 # Function to describe Kafka consumers
@@ -98,11 +76,9 @@ describe_kafka_consumers() {
   ensure_consumer_env || return 1
   local CONSUMER_GROUP=$1
 
-  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
-    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
-    echo 'security.protocol=SSL' > broker.config
-    kafka-consumer-groups --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --describe --group $CONSUMER_GROUP
-  "
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
+  kafka-consumer-groups --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --describe --group $CONSUMER_GROUP
 }
 
 # Main function to identify topics with no messages and no consumers
@@ -183,122 +159,120 @@ audit_segment_configs() {
 
   echo "Auditando tópicos com configurações de segment e fator de replicação..."
   
-  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
-    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
-    echo 'security.protocol=SSL' > broker.config
-    
-    # Obtém lista de tópicos, filtrando tópicos internos
-    topics=\$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list | grep -v '^__' | grep -v '^_confluent' | grep -v '^_schemas')
-    
-    problematic_topics=\"\"
-    replication_issues=\"\"
-    
-    echo \"=======================================\"
-    echo \"VERIFICAÇÃO DE FATOR DE REPLICAÇÃO (AWS MSK)\"
-    echo \"=======================================\"
-    
-    # Verifica fator de replicação conforme recomendação da AWS
-    replication_check=\$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --describe | grep ReplicationFactor)
-    
-    echo \"Verificando tópicos com ReplicationFactor = 1...\"
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
+  
+  # Obtém lista de tópicos, filtrando tópicos internos
+  topics=$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --list | grep -v '^__' | grep -v '^_confluent' | grep -v '^_schemas')
+  
+  problematic_topics=""
+  replication_issues=""
+  
+  echo "======================================="
+  echo "VERIFICAÇÃO DE FATOR DE REPLICAÇÃO (AWS MSK)"
+  echo "======================================="
+  
+  # Verifica fator de replicação conforme recomendação da AWS
+  replication_check=$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --describe | grep ReplicationFactor)
+  
+  echo "Verificando tópicos com ReplicationFactor = 1..."
+  echo
+  
+  rf1_topics=$(echo "$replication_check" | grep 'ReplicationFactor:1' | awk '{print $2}' | sed 's/Topic://')
+  
+  if [ -n "$rf1_topics" ]; then
+    echo "⚠️  ALERTA DE SEGURANÇA - AWS MSK:"
+    echo "Os seguintes tópicos têm ReplicationFactor = 1:"
+    echo "$rf1_topics"
     echo
+    echo "RISCO: Falhas de escrita/leitura durante:"
+    echo "- Problemas transitórios"
+    echo "- Atualizações de software"  
+    echo "- Falhas de hardware"
+    echo
+    echo "AÇÃO REQUERIDA PELA AWS:"
+    echo "- Configurar ReplicationFactor = 3"
+    echo "- Configurar MinISR (min.insync.replicas) = 2"
+    echo
+    replication_issues="$rf1_topics"
+  else
+    echo "✅ Todos os tópicos têm ReplicationFactor >= 2"
+  fi
+  
+  echo "======================================="
+  echo "VERIFICAÇÃO DE CONFIGURAÇÕES DE SEGMENT"
+  echo "======================================="
+  
+  for topic in $topics; do
+    echo "=== Verificando tópico: $topic ==="
+    configs=$(kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --entity-type topics --entity-name $topic --describe | grep -E '(segment\.bytes|segment\.ms)')
     
-    rf1_topics=\$(echo \"\$replication_check\" | grep 'ReplicationFactor:1' | awk '{print \$2}' | sed 's/Topic://')
+    is_problematic=false
     
-    if [ -n \"\$rf1_topics\" ]; then
-      echo \"⚠️  ALERTA DE SEGURANÇA - AWS MSK:\"
-      echo \"Os seguintes tópicos têm ReplicationFactor = 1:\"
-      echo \"\$rf1_topics\"
-      echo
-      echo \"RISCO: Falhas de escrita/leitura durante:\"
-      echo \"- Problemas transitórios\"
-      echo \"- Atualizações de software\"  
-      echo \"- Falhas de hardware\"
-      echo
-      echo \"AÇÃO REQUERIDA PELA AWS:\"
-      echo \"- Configurar ReplicationFactor = 3\"
-      echo \"- Configurar MinISR (min.insync.replicas) = 2\"
-      echo
-      replication_issues=\"\$rf1_topics\"
-    else
-      echo \"✅ Todos os tópicos têm ReplicationFactor >= 2\"
-    fi
-    
-    echo \"=======================================\"
-    echo \"VERIFICAÇÃO DE CONFIGURAÇÕES DE SEGMENT\"
-    echo \"=======================================\"
-    
-    for topic in \$topics; do
-      echo \"=== Verificando tópico: \$topic ===\"
-      configs=\$(kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --entity-type topics --entity-name \$topic --describe | grep -E '(segment\\.bytes|segment\\.ms)')
+    if [ -n "$configs" ]; then
+      echo "$configs"
       
-      is_problematic=false
-      
-      if [ -n \"\$configs\" ]; then
-        echo \"\$configs\"
-        
-        # Verifica segment.bytes < 125MB (131072000 bytes)
-        segment_bytes=\$(echo \"\$configs\" | grep 'segment.bytes' | sed 's/.*segment.bytes=\\([0-9]*\\).*/\\1/')
-        if [ -n \"\$segment_bytes\" ] && [ \"\$segment_bytes\" -lt 131072000 ]; then
-          is_problematic=true
-        fi
-        
-        # Verifica segment.ms < 1 dia (86400000 ms)
-        segment_ms=\$(echo \"\$configs\" | grep 'segment.ms' | sed 's/.*segment.ms=\\([0-9]*\\).*/\\1/')
-        if [ -n \"\$segment_ms\" ] && [ \"\$segment_ms\" -lt 86400000 ]; then
-          is_problematic=true
-        fi
-        
-        if [ \"\$is_problematic\" = true ]; then
-          problematic_topics=\"\$problematic_topics\$topic: \$configs\n\"
-        fi
-      else
-        echo \"Usando configurações padrão (segment.bytes=1GB, segment.ms=1 semana) - OK\"
+      # Verifica segment.bytes < 125MB (131072000 bytes)
+      segment_bytes=$(echo "$configs" | grep 'segment.bytes' | sed 's/.*segment.bytes=\([0-9]*\).*/\1/')
+      if [ -n "$segment_bytes" ] && [ "$segment_bytes" -lt 131072000 ]; then
+        is_problematic=true
       fi
-      echo
-    done
-    
-    echo \"=======================================\"
-    echo \"RESUMO GERAL - PROBLEMAS ENCONTRADOS\"
-    echo \"=======================================\"
-    
-    # Resumo de problemas de replicação (prioridade alta - AWS)
-    if [ -n \"\$replication_issues\" ]; then
-      echo \"🚨 CRÍTICO - FATOR DE REPLICAÇÃO (AÇÃO IMEDIATA REQUERIDA):\"
-      echo \"Tópicos com ReplicationFactor = 1:\"
-      echo \"\$replication_issues\"
-      echo
-      echo \"COMANDOS PARA VERIFICAÇÃO ADICIONAL:\"
-      echo \"# Para verificar configuração MinISR:\"
-      echo \"kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --entity-type topics --entity-name <TOPIC_NAME> --describe | grep min.insync.replicas\"
-      echo
-      echo \"# Para alterar configurações (exemplo):\"
-      echo \"# NOTA: ReplicationFactor não pode ser alterado após criação do tópico\"
-      echo \"# Será necessário recriar os tópicos ou usar ferramentas de migração\"
-      echo \"kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --entity-type topics --entity-name <TOPIC_NAME> --alter --add-config min.insync.replicas=2\"
-      echo
+      
+      # Verifica segment.ms < 1 dia (86400000 ms)
+      segment_ms=$(echo "$configs" | grep 'segment.ms' | sed 's/.*segment.ms=\([0-9]*\).*/\1/')
+      if [ -n "$segment_ms" ] && [ "$segment_ms" -lt 86400000 ]; then
+        is_problematic=true
+      fi
+      
+      if [ "$is_problematic" = true ]; then
+        problematic_topics="$problematic_topics$topic: $configs\n"
+      fi
+    else
+      echo "Usando configurações padrão (segment.bytes=1GB, segment.ms=1 semana) - OK"
     fi
-    
-    # Resumo de problemas de segment
-    if [ -n \"\$problematic_topics\" ]; then
-      echo \"⚠️  CONFIGURAÇÕES DE SEGMENT PROBLEMÁTICAS:\"
-      echo \"Os seguintes tópicos têm configurações abaixo do recomendado:\"
-      echo \"(segment.bytes < 125MB ou segment.ms < 1 dia)\"
-      echo
-      printf \"\$problematic_topics\"
-      echo
-      echo \"AÇÃO RECOMENDADA: Ajustar as configurações destes tópicos.\"
-      echo \"Recomendado: segment.bytes >= 125MB (131072000) e segment.ms >= 1 dia (86400000)\"
-      echo
-    fi
-    
-    # Status final
-    if [ -z \"\$replication_issues\" ] && [ -z \"\$problematic_topics\" ]; then
-      echo \"✅ TUDO OK!\"
-      echo \"✅ Todos os tópicos têm ReplicationFactor adequado\"
-      echo \"✅ Todas as configurações de segment estão seguras\"
-    fi
-  "
+    echo
+  done
+  
+  echo "======================================="
+  echo "RESUMO GERAL - PROBLEMAS ENCONTRADOS"
+  echo "======================================="
+  
+  # Resumo de problemas de replicação (prioridade alta - AWS)
+  if [ -n "$replication_issues" ]; then
+    echo "🚨 CRÍTICO - FATOR DE REPLICAÇÃO (AÇÃO IMEDIATA REQUERIDA):"
+    echo "Tópicos com ReplicationFactor = 1:"
+    echo "$replication_issues"
+    echo
+    echo "COMANDOS PARA VERIFICAÇÃO ADICIONAL:"
+    echo "# Para verificar configuração MinISR:"
+    echo "kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --entity-type topics --entity-name <TOPIC_NAME> --describe | grep min.insync.replicas"
+    echo
+    echo "# Para alterar configurações (exemplo):"
+    echo "# NOTA: ReplicationFactor não pode ser alterado após criação do tópico"
+    echo "# Será necessário recriar os tópicos ou usar ferramentas de migração"
+    echo "kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --entity-type topics --entity-name <TOPIC_NAME> --alter --add-config min.insync.replicas=2"
+    echo
+  fi
+  
+  # Resumo de problemas de segment
+  if [ -n "$problematic_topics" ]; then
+    echo "⚠️  CONFIGURAÇÕES DE SEGMENT PROBLEMÁTICAS:"
+    echo "Os seguintes tópicos têm configurações abaixo do recomendado:"
+    echo "(segment.bytes < 125MB ou segment.ms < 1 dia)"
+    echo
+    printf "$problematic_topics"
+    echo
+    echo "AÇÃO RECOMENDADA: Ajustar as configurações destes tópicos."
+    echo "Recomendado: segment.bytes >= 125MB (131072000) e segment.ms >= 1 dia (86400000)"
+    echo
+  fi
+  
+  # Status final
+  if [ -z "$replication_issues" ] && [ -z "$problematic_topics" ]; then
+    echo "✅ TUDO OK!"
+    echo "✅ Todos os tópicos têm ReplicationFactor adequado"
+    echo "✅ Todas as configurações de segment estão seguras"
+  fi
 }
 
 list_compact_only_topics() {
@@ -306,38 +280,36 @@ list_compact_only_topics() {
 
   echo "Listando tópicos internos que usam apenas 'compact'..."
   
-  docker run --rm -i --entrypoint=/bin/sh confluentinc/cp-kafka:latest -c "
-    export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
-    echo 'security.protocol=SSL' > broker.config
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  echo 'security.protocol=SSL' > /tmp/broker.config
+  
+  # Listar tópicos internos
+  internal_topics=$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --list | grep -E '(changelog|repartition|_confluent)')
+  
+  if [ -z "$internal_topics" ]; then
+    echo "Nenhum tópico interno encontrado."
+    return 0
+  fi
+  
+  echo "Tópicos encontrados:"
+  echo "$internal_topics"
+  echo
+  
+  echo "Aplicando compact,delete para cada tópico..."
+  echo
+  
+  # Aplicar compact,delete para cada tópico
+  for topic in $internal_topics; do
+    echo "Updating $topic..."
     
-    # Listar tópicos internos
-    internal_topics=\$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --list | grep -E '(changelog|repartition|_confluent)')
-    
-    if [ -z \"\$internal_topics\" ]; then
-      echo \"Nenhum tópico interno encontrado.\"
-      exit 0
+    if kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --entity-type topics --entity-name "$topic" --alter --add-config cleanup.policy=compact,delete; then
+      echo "✅ $topic atualizado com sucesso"
+    else
+      echo "❌ Erro ao atualizar $topic"
     fi
     
-    echo \"Tópicos encontrados:\"
-    echo \"\$internal_topics\"
     echo
-    
-    echo \"Aplicando compact,delete para cada tópico...\"
-    echo
-    
-    # Aplicar compact,delete para cada tópico
-    for topic in \$internal_topics; do
-      echo \"Updating \$topic...\"
-      
-      if kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=broker.config --entity-type topics --entity-name \"\$topic\" --alter --add-config cleanup.policy=compact,delete; then
-        echo \"✅ \$topic atualizado com sucesso\"
-      else
-        echo \"❌ Erro ao atualizar \$topic\"
-      fi
-      
-      echo
-    done
-    
-    echo \"Script concluído!\"
-  "
+  done
+  
+  echo "Script concluído!"
 }
