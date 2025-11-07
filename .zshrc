@@ -4,7 +4,13 @@ export ZSH="$HOME/.oh-my-zsh"
 export SHELL=/bin/zsh
 
 # Set up the theme
-ZSH_THEME="xiong-chiamiov-plus"
+ZSH_THEME="gnzh"
+# "gnzh"
+# "jtriley"
+# "jonathan"
+# "frisk"
+# "itchy" 
+# "duellj"
 
 # Set up the plugins
 plugins=(git aws virtualenv docker docker-compose zsh-syntax-highlighting zsh-autosuggestions fast-syntax-highlighting)
