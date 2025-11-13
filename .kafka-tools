@@ -275,7 +275,7 @@ audit_segment_configs() {
   fi
 }
 
-list_compact_only_topics() {
+list_compact_only_internal_topics() {
   ensure_broker_env || return 1
 
   echo "Listando tópicos internos que usam apenas 'compact'..."
@@ -284,32 +284,44 @@ list_compact_only_topics() {
   echo 'security.protocol=SSL' > /tmp/broker.config
   
   # Listar tópicos internos
-  internal_topics=$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --list | grep -E '(changelog|repartition|_confluent)')
+  internal_topics=$(kafka-topics --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --list | grep -E '^_')
   
   if [ -z "$internal_topics" ]; then
     echo "Nenhum tópico interno encontrado."
     return 0
   fi
   
-  echo "Tópicos encontrados:"
   echo "$internal_topics"
   echo
-  
-  echo "Aplicando compact,delete para cada tópico..."
-  echo
-  
-  # Aplicar compact,delete para cada tópico
-  for topic in $internal_topics; do
-    echo "Updating $topic..."
-    
-    if kafka-configs --bootstrap-server ${KAFKA_BROKER} --command-config=/tmp/broker.config --entity-type topics --entity-name "$topic" --alter --add-config cleanup.policy=compact,delete; then
-      echo "✅ $topic atualizado com sucesso"
-    else
-      echo "❌ Erro ao atualizar $topic"
-    fi
-    
-    echo
+}
+
+update_policy() {
+  ensure_broker_env || return 1
+
+  # Which policy to set?
+  if [ -z "$1" ]; then
+    echo -e "Usage: update_policy <policy>"
+    echo -e "Example: \n$ update_policy retention.ms=604800000 \nor \n$ update_policy cleanup.policy=\[compact,delete\]"
+    return 1
+  fi
+
+  export KAFKA_HEAP_OPTS='-Xms512m -Xmx1g'
+  cat > /tmp/broker.config << EOF
+security.protocol=SSL
+request.timeout.ms=60000
+default.api.timeout.ms=60000
+EOF
+
+  # Change cleanup.policy
+  while IFS= read -r topic; do
+    kafka-configs --bootstrap-server ${KAFKA_BROKER} \
+      --command-config=/tmp/broker.config \
+      --entity-type topics \
+      --entity-name "${topic}" \
+      --alter \
+      --add-config $1 \
+      > /dev/null
+
+    test $? -eq 0 && echo "✅ $topic atualizado com sucesso" || echo "❌ Erro ao atualizar $topic"
   done
-  
-  echo "Script concluído!"
 }
