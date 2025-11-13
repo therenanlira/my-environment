@@ -26,4 +26,4 @@ DISABLE_UPDATE_PROMPT=true
 test -f $HOME/.extras && source $HOME/.extras
 
 # Load Kafka tools
-test -f $HOME/.kafka-tools && source $HOME/.kafka-tools
+# test -f $HOME/.kafka-tools && source $HOME/.kafka-tools
