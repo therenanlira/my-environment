@@ -1,8 +1,9 @@
 #!/bin/bash
 
 ## Variables
-OS=$(uname -s)
+OS="$(uname | tr '[:upper:]' '[:lower:]')"
 DISTRO=$(test -f /etc/os-release && grep "ID_LIKE" /etc/os-release | awk -F= '{ print $2 }')
+ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')"
 
 ## Functions
 function install_homebrew() {
@@ -11,18 +12,18 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 }
 
 ## Check if OS is Linux or Darwin
-if [ $OS != "Linux" ] && [ $OS != "Darwin" ]; then
+if [ $OS != "linux" ] && [ $OS != "darwin" ]; then
   echo "This script is not supported for your OS"
   exit 1
 fi
 
 ## Identify the shell
-test $OS = "Linux" && test $SHELL = "/bin/bash" && RCFILE=$HOME/.bashrc
-test $OS = "Darwin" && test $SHELL = "/bin/bash" && RCFILE=$HOME/.bash_profile
+test $OS = "linux" && test $SHELL = "/bin/bash" && RCFILE=$HOME/.bashrc
+test $OS = "darwin" && test $SHELL = "/bin/bash" && RCFILE=$HOME/.bash_profile
 test $SHELL = "/bin/zsh" && RCFILE=$HOME/.zshrc
 
 ## Update and install basic packages
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   if [ $DISTRO == "debian" ]; then
     sudo apt update
     INSTALL="sudo apt install -y"
@@ -30,7 +31,7 @@ if [ $OS == "Linux" ]; then
     sudo dnf update
     INSTALL="sudo dnf install -y"
   fi
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   test ! -f /opt/homebrew/bin/brew && install_homebrew
   INSTALL="brew install"
 fi
@@ -38,7 +39,7 @@ fi
 ## Install initial packages
 PACKAGES=("neofetch" "figlet" "ed" "jq" "curl" "git" "gawk" "make" "unzip" "vim" "procps" "whois" "nmap")
 for package in "${PACKAGES[@]}"; do
-  if [ $OS == "Linux" ]; then
+  if [ $OS == "linux" ]; then
     if [ $DISTRO == "debian" ]; then
       if ! dpkg -l | grep -q "^ii  $package "; then
         $INSTALL $package
@@ -48,7 +49,7 @@ for package in "${PACKAGES[@]}"; do
         $INSTALL $package
       fi
     fi
-  elif [ $OS == "Darwin" ]; then
+  elif [ $OS == "darwin" ]; then
     if ! brew list --formula | grep -q "^$package\$"; then
       $INSTALL $package
     fi
@@ -107,20 +108,20 @@ fi
 $INSTALL nodejs npm python3 python3-pip pipx golang
 
 ## Install X Code
-test $OS = "Darwin" && xcode-select --install
+test $OS = "darwin" && xcode-select --install
 
 ## Install TLDR
 if ! tldr --version &>/dev/null; then
-  test $OS = "Linux" && sudo npm install -g tldr
-  test $OS = "Darwin" && npm install -g tldr
+  test $OS = "linux" && sudo npm install -g tldr
+  test $OS = "darwin" && npm install -g tldr
 fi
 
 ## Install FZF
 if ! fzf --version &>/dev/null; then
-  if [ $OS == "Linux" ]; then
+  if [ $OS == "linux" ]; then
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
     ~/.fzf/install
-  elif [ $OS == "Darwin" ]; then
+  elif [ $OS == "darwin" ]; then
     $INSTALL fzf
     $(brew --prefix)/opt/fzf/install
   fi
@@ -139,14 +140,14 @@ if ! tfswitch --version &>/dev/null; then
 fi
 
 ## Install TFSec
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
 else
   $INSTALL tfsec
 fi
 
 ## Install Terraform Docs
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   curl -Lo ./terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.18.0/terraform-docs-v0.18.0-$(uname)-amd64.tar.gz
   tar -xzf terraform-docs.tar.gz
   chmod +x terraform-docs
@@ -156,7 +157,7 @@ else
 fi
 
 ## Install Packer
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   if [ $DISTRO == "debian" ]; then
     wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
@@ -166,20 +167,20 @@ if [ $OS == "Linux" ]; then
     sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
     sudo yum -y install packer
   fi
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   brew tap hashicorp/tap
   $INSTALL hashicorp/tap/packer
 fi
 
 ## Install AWS CLI
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
   unzip awscliv2.zip
   sudo ./aws/install
   rm -rf awscliv2.zip aws
   curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
   sudo dpkg -i session-manager-plugin.deb
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
   sudo installer -pkg AWSCLIV2.pkg -target /
   rm -rf AWSCLIV2.pkg
@@ -189,21 +190,21 @@ elif [ $OS == "Darwin" ]; then
 fi
 
 ## Install Azure CLI
-test $OS = "Linux" && curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-test $OS = "Darwin" && $INSTALL azure-cli
+test $OS = "linux" && curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+test $OS = "darwin" && $INSTALL azure-cli
 
 ## Install Google Cloud CLI
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
   echo "deb https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
   sudo apt update
   $INSTALL google-cloud-sdk
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   $INSTALL --cask google-cloud-sdk
 fi
 
 ## Install Kubernetes tools
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   $INSTALL apt-transport-https ca-certificates curl gnupg
   curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg # allow unprivileged APT programs to read this keyring
@@ -227,7 +228,7 @@ if [ $OS == "Linux" ]; then
   rm get_helm.sh
 
   curl -sS https://webinstall.dev/k9s | bash
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   $INSTALL kubectl
   test $SHELL = "/bin/bash" && $INSTALL bash-completion@2
   test $SHELL = "/bin/bash" && kubectl completion bash > $(brew --prefix)/etc/bash_completion.d/kubectl
@@ -247,8 +248,6 @@ export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 if ! kubectl krew version &>/dev/null; then
   (
     set -x; cd "$(mktemp -d)" &&
-    OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
-    ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
     KREW="krew-${OS}_${ARCH}" &&
     curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
     tar zxvf "${KREW}.tar.gz" &&
@@ -266,7 +265,7 @@ if ! kubectl node-shell --version &>/dev/null; then
 fi
 
 ## Install CMCTL and CFSSL
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   if cmctl --version &>/dev/null; then
     CMCTL_VERSION=0.5.0
     curl -fsSLO "https://github.com/oleewere/cmctl/releases/download/v${CMCTL_VERSION}/cmctl_${CMCTL_VERSION}_linux_64-bit.tar.gz" && 
@@ -281,14 +280,23 @@ if [ $OS == "Linux" ]; then
     sudo chown root:root /usr/local/bin/cfssl
     sudo chmod 755 /usr/local/bin/cfssl
   fi
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   brew tap oleewere/repo
   $INSTALL cmctl
   $INSTALL cfssl
 fi
 
+## Install Minikube
+if [ $OS == "linux" ]; then
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')"
+  curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-$ARCH
+  sudo install minikube-linux-$ARCH /usr/local/bin/minikube && rm minikube-linux-$ARCH
+elif [ $OS == "darwin" ]; then
+  $INSTALL minikube
+fi
+
 ## Install e1s
-if [ $OS == "Linux" ]; then
+if [ $OS == "linux" ]; then
   E1S_VERSION="1.0.34"
   E1S_OS="linux_amd64"
 
@@ -297,7 +305,7 @@ if [ $OS == "Linux" ]; then
   sudo chown root:root /usr/local/bin/e1s
   sudo chmod +x /usr/local/bin/e1s
   rm e1s_$E1S_VERSION\_$E1S_OS.tar.gz
-elif [ $OS == "Darwin" ]; then
+elif [ $OS == "darwin" ]; then
   $INSTALL e1s
 fi
 
@@ -305,13 +313,14 @@ fi
 read -p "Install Docker? [y/N] " yn
 case $yn in
   [Yy] )
-      if [ $OS == "Linux" ]; then
+      if [ $OS == "linux" ]; then
         $INSTALL docker.io
         sudo systemctl enable docker
         sudo systemctl start docker
-      elif [ $OS == "Darwin" ]; then
+      elif [ $OS == "darwin" ]; then
         $INSTALL docker
         $INSTALL --cask docker
+        $INSTALL orbstack
       fi;;
   [Nn]* ) ;;
 esac
@@ -320,9 +329,9 @@ esac
 read -p "Install Visual Studio Code? [y/N] " yn
 case $yn in
   [Yy] )
-      if [ $OS == "Linux" ]; then
+      if [ $OS == "linux" ]; then
         $INSTALL code
-      elif [ $OS == "Darwin" ]; then
+      elif [ $OS == "darwin" ]; then
         $INSTALL --cask visual-studio-code
       fi;;
   [Nn]* ) ;;
