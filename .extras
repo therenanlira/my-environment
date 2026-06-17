@@ -40,6 +40,11 @@ if kubectl krew &>/dev/null; then
   test -f $HOME/.krew/bin/kubectl-krew && export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 fi
 
+## Minikube
+if minikube version &>/dev/null; then
+  alias mk="minikube"
+fi
+
 ## Python
 if python3 --version &>/dev/null; then
   alias py=python3
