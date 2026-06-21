@@ -325,6 +325,14 @@ case $yn in
   [Nn]* ) ;;
 esac
 
+## Install Girus
+read -p "Install Girus LinuxTips? [y/N] " yn
+case $yn in
+  [Yy] )
+      curl -sSL girus.linuxtips.io | bash;;
+  [Nn]* ) ;;
+esac
+
 ## Install VS Code
 read -p "Install Visual Studio Code? [y/N] " yn
 case $yn in
@@ -356,4 +364,11 @@ rm $HOME/.kafka-tools &>/dev/null \
 && wget -O $HOME/.kafka-tools https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.kafka-tools
 if ! grep -q "# Load Kafka tools" $HOME/.zshrc; then
   echo -e "\n# Load Kafka tools\ntest -f \$HOME/.kafka-tools && source \$HOME/.kafka-tools" >> $HOME/.zshrc
+fi
+
+## Girus shell completion
+rm $HOME/.girus &>/dev/null \
+&& wget -O $HOME/.girus https://raw.githubusercontent.com/therenanlira/my-environment/refs/heads/main/.girus
+if ! grep -q "# Load Girus completion" $HOME/.zshrc; then
+  echo -e "\n# Load Girus completion\ntest -f \$HOME/.girus && source \$HOME/.girus" >> $HOME/.zshrc
 fi
